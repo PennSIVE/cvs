@@ -35,7 +35,7 @@ dtboundary<-function(mask) {
   mask[mask>0]<-min.d
   return(mask)
 }
-frangi=function(image,mask,radius=1,color="dark",parallel=FALSE,cores=2,
+frangifilter=function(image,mask,radius=1,color="dark",parallel=FALSE,cores=2,
                 c3d=F,min.scale=0.5,max.scale=0.5){
   
   if(c3d==F){
@@ -266,7 +266,7 @@ hessian=function(image,mask,radius=1,parallel=FALSE,cores=2){
     result=matrix(unlist(pbmclapply(biglist,getevals,mc.cores=cores)),
                   ncol=3,byrow=T)
   }else if(parallel==FALSE){
-    result=matrix(unlist(pblapply(biglist,getevals)),ncol=3,byrow=T)
+    result=matrix(unlist(lapply(biglist,getevals)),ncol=3,byrow=T)
   }
   e1=mask
   e1[mask==1]<-result[,1]
@@ -306,4 +306,11 @@ getnulldist=function(x,centsub,coords,frangsub){
   coordsamp=coords[samp,]
   sampprod=frangsub*centsamp
   return(sum(sampprod))
+}
+getcands=function(x,lables,nottiss){
+  if(sum(nottiss[lables==x])>0){
+    return(0)
+  }else{
+    return(1)
+  }
 }

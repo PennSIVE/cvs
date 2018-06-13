@@ -9,7 +9,7 @@
 #---
 # **flair** is a T2-FLAIR volume of class nifti.
 #---
-# **probmap** is an image of class \code{nifti}, containing the probability that each voxel
+# **probmap** is an image of class nifti, containing the probability that each voxel
 # is a lesion voxel. If a probability map is not included, the MIMoSA model will be applied (Valcarcel et al., 2017).
 #---
 # **binmap** (if probmap!=NULL) is a nifti mask in which voxels are classified as either lesion voxels
@@ -42,15 +42,12 @@ library(fslr) # for smoothing and tissue class segmentation
 library(parallel) # for working in parallel
 library(pbmcapply) # for working in parallel
 
+source("helperfunctions.R") # load necessary helper functions
+
 # CVS detection function:
 centralveins=function(epi,t1,flair,probmap=NULL,binmap=NULL,parallel=F,
                       cores=2,skullstripped=F,biascorrected=F,c3d=F){
-  
-  ###############################################
-  ####### Load necessary helper functions #######
-  ###############################################
-  source("helperfunctions.R")
-  
+
   #######################################
   ####### Perform bias correction #######
   #######################################
@@ -110,7 +107,7 @@ centralveins=function(epi,t1,flair,probmap=NULL,binmap=NULL,parallel=F,
   ####### Obtain vein map #######
   ###############################
   if(c3d==T){
-    frangi=frangi(image=epi,mask=epi!=0,parallel=parallel,cores=cores,c3d=c3d)
+    frangi=frangifilter(image=epi,mask=epi!=0,parallel=parallel,cores=cores,c3d=c3d)
     frangi[frangi<0]<-0
     
     # Register vein map to T1
@@ -122,7 +119,7 @@ centralveins=function(epi,t1,flair,probmap=NULL,binmap=NULL,parallel=F,
                        remove.warp=FALSE,outprefix="fun")
     epi=epi$outfile
     
-    frangi=frangi(image=epi,mask=probmap>0.3,parallel=parallel,cores=cores,c3d=c3d)
+    frangi=frangifilter(image=epi,mask=probmap>0.3,parallel=parallel,cores=cores,c3d=c3d)
     frangi[frangi<0]<-0
   }
   
