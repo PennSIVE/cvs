@@ -1,17 +1,11 @@
-# Central Vein Detection algorithm - Simple
+# Central Vein Detection algorithm - With pre-segmented lesions and pre-calculated Frangi filter
 # Code written by Jordan Dworkin (jdwor@upenn.edu)
 
 #Variable descriptions:
-# **probmap** is an image of class nifti, containing the probability that each voxel
-# is a lesion voxel.
-#---
-# **binmap** is a nifti mask in which voxels are classified as either lesion voxels
-# or not lesion voxels. Note that mask should be in the same space as the probmap volume.
+# **lesionmap** is a nifti mask in which voxels have been manually classified as either
+# lesion voxels or not lesion voxels.
 #---
 # **veinmap** is an image of class nifti, containing the vesselness score for each voxel.
-#---
-# **tissue** is an image of class nifti, where candidate voxels (e.g., deep white matter) are labeled 1,
-# and non-candidate voxels are labeled 0.
 #---
 # **parallel** is a logical value that indicates whether the user's computer
 # is Linux or Unix (i.e. macOS), and should run the code in parallel.
@@ -26,44 +20,27 @@
 # cvs.biomarker (a numeric value representing the average CVS probability of a subject's lesions).
 
 # Required packages:
-library(neurobase) # for reading and writing nifti files
-library(ANTsRCore) # for cluster labeling
-library(extrantsr) # for transitioning between ants and nifti
-library(parallel) # for working in parallel
-library(pbmcapply) # for working in parallel
+#library(neurobase) # for reading and writing nifti files
+#library(ANTsRCore) # for cluster labeling
+#library(extrantsr) # for transitioning between ants and nifti
+#library(parallel) # for working in parallel
+#library(pbmcapply) # for working in parallel
 
 
-source("helperfunctions.R") # load necessary helper functions
+#source("helperfunctions.R") # load necessary helper functions
 
 # Simple CVS detection function:
-centralveins_simple=function(probmap,binmap,veinmap,tissue,parallel=F,cores=2){
+centralveins_presegmented=function(lesionmap,veinmap,parallel=F,cores=2){
 
   ###############################################################
   ####### Split confluent lesions for individual analysis #######
   ###############################################################
-  les=lesioncenters(probmap,binmap,parallel=parallel,cores=cores)$lesioncenters
-  
-  ############################################
-  ####### Remove non-candidate lesions #######
-  ############################################
-  nctis=(tissue==0)
-  lables=ants2oro(labelClusters(oro2ants(les>0),minClusterSize=27))
-  for(j in 1:max(lables)){
-    if(sum(nctis[lables==j])>0){
-      lables[lables==j]<-0
-    }
-  }
-  les=lables>0
-  
-  ###################################################
-  ####### Obtain distance-to-the-boundary map #######
-  ###################################################
-  dtb=dtboundary(les)
+  dtb=dtboundary(lesionmap)
   
   ######################################################################
   ####### Perform permutation procedure to get CVS probabilities #######
   ######################################################################
-  lables=ants2oro(labelClusters(oro2ants(les),minClusterSize=27))
+  lables=ants2oro(labelClusters(oro2ants(lesionmap),minClusterSize=27))
   probles=lables
   avprob=NULL
   maxles=max(as.vector(lables))
