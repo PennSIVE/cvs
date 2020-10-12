@@ -35,6 +35,76 @@ dtboundary<-function(mask) {
   mask[mask>0]<-min.d
   return(mask)
 }
+frangifilter=function(image,mask,radius=1,color="dark",min.scale=0.5,max.scale=0.5){
+    tempinv=tempfile(pattern="file", tmpdir=tempdir(), fileext=".nii.gz")
+    if(color=="dark"){
+      writenii(-1*image,tempinv)
+    }else{
+      writenii(image,tempinv)
+    }
+    tempvein=tempfile(pattern="file", tmpdir=tempdir(), fileext=".nii.gz")
+    system(paste0("c3d ",tempinv," -hessobj 1 ",min.scale," ",max.scale," -oo ",tempvein))
+    veinmask=readnii(tempvein)
+    return(veinmask)
+}
+
+frangifilternoc3d=function(image,mask,radius=1,color="dark",parallel=FALSE,cores=2,
+                min.scale=0.5,max.scale=0.5){
+  
+    eigvals=hessian(image,mask,radius,parallel,cores)
+    
+    print("Calculating vesselness measure")
+    l1=eigvals$eigval1
+    l2=eigvals$eigval2
+    l3=eigvals$eigval3
+    l1=as.vector(l1[mask==1])
+    l2=as.vector(l2[mask==1])
+    l3=as.vector(l3[mask==1])
+    rm(eigvals)
+    
+    al1=abs(l1)
+    al2=abs(l2)
+    al3=abs(l3)
+    
+    Ra=al2/al3
+    Ra[!is.finite(Ra)]<-0
+    Rb=al1/sqrt(al2*al3)
+    Rb[!is.finite(Rb)]<-0
+    
+    S=sqrt(al1^2 + al2^2 + al3^2)
+    A=2*(.5^2)
+    B=2*(.5^2)
+    C=2*(.5*max(S))^2
+    
+    rm(al1,al2,al3)
+    
+    eA=1-exp(-(Ra^2)/A)
+    eB=exp(-(Rb^2)/B)
+    eC=1-exp(-(S^2)/C)
+    
+    rm(Ra,Rb,S,A,B,C)
+    
+    vness=eA*eB*eC
+    
+    rm(eA,eB,eC)
+    
+    if(color=="dark"){
+      vness[l2<0 | l3<0] = 0
+      vness[!is.finite(vness)] = 0
+    }else if(color=="bright"){
+      vness[l2>0 | l3>0] = 0
+      vness[!is.finite(vness)] = 0
+    }
+    
+    #image[mask==1]<-vness
+    #return(image)
+    
+    outimage<-image*0
+    outimage[mask==1]<-vness
+    return(outimage)
+}
+
+
 gradient=function(image,mask=NULL,which="all",radius=1){
   if(radius>=min(dim(image))){stop("Radius larger than smallest image dimension")}
   if(is.nifti(image)){
@@ -212,30 +282,25 @@ hessian=function(image,mask,radius=1,parallel=FALSE,cores=2){
   
   return(list(eigval1=e1,eigval2=e2,eigval3=e3))
 }
-lesioncenters=function(probmap,binmap,c3d=T,minCenterSize=10,radius=1,parallel=F,cores=2){
+labelreg=function(fullimage,labelimage,fixedimage,typeofTransform="Rigid",
+                  interpolator="lanczosWindowedSinc"){
+  imtofix=registration(filename=fullimage,template.file=fixedimage,
+                       typeofTransform=typeofTransform,remove.warp=FALSE,
+                       outprefix="fun")
+  labtofix<-antsApplyTransforms(fixed=oro2ants(fixedimage),moving=oro2ants(labelimage),
+                                transformlist=imtofix$fwdtransforms,
+                                interpolator=interpolator)
+  return(list(image_reg=ants2oro(imtofix$outfile),label_reg=ants2oro(labtofix)))
+}
+lesioncenters=function(probmap,binmap,minCenterSize=10,radius=1,
+                       parallel=F,cores=2){
   scale=ceiling((1/mean(probmap@pixdim[2:4]))^3)
-  if(c3d==T){
-    tempprob=tempfile(pattern = "file", tmpdir = tempdir(), fileext = ".nii.gz")
-    writenii(probmap,tempprob)
-    tempeigs=tempfile(pattern = "file", tmpdir = tempdir())
-    system(paste0("c3d ",tempprob," -hesseig ",scale," -oo ",paste0(tempeigs,"%02d.nii.gz")))
-    
-    phes1=readnii(paste0(tempeigs,"00.nii.gz"))
-    phes2=readnii(paste0(tempeigs,"01.nii.gz"))
-    phes3=readnii(paste0(tempeigs,"02.nii.gz"))
-  }else if(c3d==F){
-    phes=hessian(probmap,mask=binmap,radius,parallel,cores)
-    phes1=phes$eigval1
-    phes2=phes$eigval2
-    phes3=phes$eigval3
-  }else{
-    stop("'c3d' must be TRUE or FALSE")
-  }
+  phes=hessian(probmap,mask=binmap,radius,parallel,cores)
   clusmap=ants2oro(labelClusters(oro2ants(binmap),minClusterSize=20*scale))
   
   les=clusmap
   les[les!=0]<-1
-  les[phes1>0 | phes2>0 | phes3>0]<-0
+  les[phes$eigval1>0 | phes$eigval2>0 | phes$eigval3>0]<-0
   les=ants2oro(labelClusters(oro2ants(les),minClusterSize=minCenterSize*scale))
   
   return(list(lesioncenters=les,lesioncount=max(les)))
@@ -246,4 +311,11 @@ getnulldist=function(x,centsub,coords,frangsub){
   coordsamp=coords[samp,]
   sampprod=frangsub*centsamp
   return(sum(sampprod))
+}
+getcands=function(x,lables,nottiss){
+  if(sum(nottiss[lables==x])>0){
+    return(0)
+  }else{
+    return(1)
+  }
 }
