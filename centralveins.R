@@ -36,7 +36,7 @@ library(mimosa) # for performing lesion segmentation
 library(ANTsRCore) # for cluster labeling
 library(fslr) # for smoothing and tissue class segmentation
 library(parallel) # for working in parallel
-library(pbmcapply) # for working in parallel
+# library(pbmcapply) # for working in parallel
 library(WhiteStripe)
 
 source("helperfunctions.R") # load necessary helper functions

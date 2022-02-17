@@ -268,7 +268,7 @@ hessian=function(image,mask,radius=1,parallel=FALSE,cores=2){
   
   print("Calculating eigenvalues")
   if(parallel==TRUE){
-    result=matrix(unlist(pbmclapply(biglist,getevals,mc.cores=cores)),
+    result=matrix(unlist(mclapply(biglist,getevals,mc.cores=cores)),
                   ncol=3,byrow=T)
   }else if(parallel==FALSE){
     result=matrix(unlist(lapply(biglist,getevals)),ncol=3,byrow=T)
