@@ -281,6 +281,8 @@ if args.analysis_level == "participant":
                 cmd += " --n4"
             if args.skullstrip:
                 cmd += " --skullstrip"
+            print(cmd)
+            os.chdir("/") # R script sources things using relative path
             run(
                 cmd,
                 {

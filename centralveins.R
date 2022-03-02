@@ -66,13 +66,13 @@ centralveins_preproc<-function(epi,t1,flair,skullstripped=F,biascorrected=F){
   if(skullstripped==F){
     t1_n4_brain=fslbet_robust(t1,correct=F)
     epi_n4_brain=fslbet_robust(epi,correct=F)
-    writenii(epi_n4_brain, "epi_brain")
-    writenii(t1_n4_brain, "t1_brain")
   } else { # assume the T1 is skull-stripped
     t1_n4_brain<-t1_n4; epi_n4_brain<-epi_n4
     #epi_n4_brain=fslbet_robust(epi_n4,correct=F)
     #writenii(epi_n4_brain, "epi_brain")
   }
+  writenii(epi_n4_brain, "epi_brain")
+  writenii(t1_n4_brain, "t1_brain")
   mask<-1*(t1_n4_brain!=0)
 
   ############################################

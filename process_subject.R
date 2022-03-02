@@ -31,7 +31,9 @@ epi = readnii(argv$epi)
 t1 = readnii(argv$t1)
 flair = readnii(argv$flair)
 setwd(argv$outdir)
+print("Starting preprocessing...")
 centralveins_preproc(epi, t1, flair, skullstripped = argv$skullstrip, biascorrected = argv$n4)
+print("Preprocessing complete!")
 
 
 epi_n4_brain = readnii('epi_brain.nii.gz')
@@ -40,8 +42,12 @@ flair_n4_brain = readnii('flair_brain.nii.gz')
 brainmask_reg = readnii('brainmask_reg_flair.nii.gz')
 csf = readnii('csf.nii.gz')
 flair_to_epi_filename = 'flair_to_epi'
+print("Starting segmentation...")
 centralveins_seg(epi_n4_brain, t1_reg, flair_n4_brain, brainmask_reg, csf, flair_to_epi_filename, mimosa_model = mimosa_model, probmap = NULL, parallel = T, cores = as.numeric(Sys.getenv("CORES")), probthresh = argv$thresh)
+print("Segmentation complete!")
 
+print("Starting CVS...")
 result = centralveins(readnii("les_reg.nii.gz"), readnii("frangi.nii.gz"), readnii("dtb.nii.gz"), parallel = T, cores = as.numeric(Sys.getenv("CORES")))
+print("CVS complete!")
 
 saveRDS(result, file = "centralveins")
